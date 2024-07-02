@@ -1,0 +1,52 @@
+
+{% set active_page = 'new_user_page' %}
+{% extends 'base.html' %}
+
+{% block content %}
+<h2 id="page-title">Add New User</h2>
+<div>
+    <form method="POST" action="{{url_for('add_new_user')}}">
+        <div>
+            <label for="firstName_field">First Name:</label>
+            <input type="text" name="firstName_field" required>
+        </div>
+        <div>
+            <label for="lastName_field">Last Name:</label>
+            <input type="text" name="lastName_field" required>
+        </div>
+        <div>
+            <label for="createPassword_field">Enter Password:</label>
+            <input type="password" name="createPassword_field" id="createPassword" required>
+        </div>
+
+        <div>
+            <label for="confirmPassword_field">Confirm Password:</label>
+            <input type="password" name="confirmPassword_field" id="confirmPassword" required>
+            <h5 style="color:red" id="notice"></h5>
+        </div>
+        <input type="submit" name="submit">
+    </form>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function(){
+        var inputField=document.getElementById('confirmPassword');
+        var password=document.getElementById('createPassword');
+        inputField.addEventListener('input', function(){
+            if (inputField.value != password.value){
+                document.getElementById('notice').innerHTML="Password values do not match!";
+            }else{
+                document.getElementById('notice').innerHTML="Excellent";
+            }
+        });
+    });
+</script>
+{% endblock %}
+
+
+<!--
+                                        Jinja Code Above
+1. Creates sets the 'active_page' variable so that side panel can highlight (through CSS) which page is active.
+2. The 'base.html' file with some of the similar views is extended to the current page.
+2. Content block is specfied here so that it can be redered onto the rest of the code from 'base.html'. 
+-->

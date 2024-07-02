@@ -6,7 +6,7 @@ from reportlab.pdfgen import canvas
 from io import BytesIO
 import json, decimal, os, datetime
 from data_fetch import DataFetcher
-from query import items, mission, lastInv, invoice, allQuotes, allInv, inv_itm, delete_details, delete_invoice, inv_basic, inv_details, add, insertQuotation, insertQuoteDetails, lastQuote, delete_qDetails, delete_qEntry, delete_quotation, allQuotedItems, quotationInfo, itemCatalog, updateComment,totalCostQuotedItems, getQNumber
+from query import items, mission, lastInv, invoice, allQuotes, allInv, inv_itm, delete_details, delete_invoice, inv_basic, inv_details, add, insertQuotation, insertQuoteDetails, lastQuote, delete_qDetails, delete_qEntry, delete_quotation, allQuotedItems, quotationInfo, itemCatalog, updateComment,totalCostQuotedItems, getQNumber, itemsNotInvoiced
 import logging
 routeGeneratePDF_bp=Blueprint('route_generatePDF', __name__)
 
@@ -24,6 +24,12 @@ def totalCost(quotationNumber):
     data_fetcher=DataFetcher(current_app.config['database'])
     data_fetcher.update_data(totalCostQuotedItems, (quotationNumber, quotationNumber))
     return "success?"
+
+def get_notYetInvoiced(itemID):
+    with DataFetcher(current_app.config['database']) as data_fetcher:
+        notYetInvoiced = data_fetcher.fetch_data(itemsNotInvoiced, itemID)
+
+    return notYetInvoiced
 
 @routeGeneratePDF_bp.route("/quote-page")
 @login_required
@@ -60,9 +66,10 @@ def invoice_page():
     data1=data_fetcher.fetch_data(mission)
     invoice=data_fetcher.fetch_row(lastInv)
     ainv = data_fetcher.fetch_data(allInv)
+    allQuotations=data_fetcher.fetch_data(allQuotes)
 
     if invoice == None:
-        final_str="IT0000"
+        final_str="IT0001"
     
     else:
 
@@ -103,7 +110,8 @@ def invoice_page():
 
         global global_data 
         global_data= json_string
-    return render_template("invoice.html", data=data, data1=json_string, Uname=current_user, allInvoices=ainv, inv=final_str)
+
+    return render_template("invoice.html", data=data, data1=json_string, Uname=current_user, allInvoices=ainv, inv=final_str, allQuotations=allQuotations)
 
 @routeGeneratePDF_bp.route('/preview-quotation', methods=['GET', 'POST'])
 @login_required
@@ -194,6 +202,25 @@ def get_quotedItems():
     formatQuotedItems= [{'data': list(row)} for row in quotedItems]
     return jsonify(qItems=formatQuotedItems, qNo=quotationNo, quote=quotation, catalog=catalog)
 
+@routeGeneratePDF_bp.route('/retrieve-quoted-items', methods=['POST'])
+@login_required
+def retrieve_quoted_items():
+    quotationNo=request.form.get('quoteNo')
+    with DataFetcher(current_app.config['database']) as data_fetcher:
+        try:
+            quoted_items=data_fetcher.fetch_data(allQuotedItems, (quotationNo,))
+            theQuotation=data_fetcher.fetch_row(quotationInfo, (quotationNo,))
+        except Exception as e:
+            logger.error(f"Error during retrived quotation: {e}")
+            raise
+    itemsYetToInvoice=[]    
+    for data_tuple in quoted_items:
+        itemID=(data_tuple[2],)
+        itemsYetToInvoice.append(get_notYetInvoiced(itemID))
+    
+    print(quoted_items)
+    return jsonify(qItems=quoted_items, itemsForInvoice=itemsYetToInvoice, theQuotation=theQuotation)
+
 @routeGeneratePDF_bp.route('/preview-invoice', methods=['GET', 'POST'])
 @login_required
 def preview_invoice():
@@ -254,6 +281,25 @@ def preview_invoice():
 
     return render_template('input.html')
 
+@routeGeneratePDF_bp.route('/invoice-entry2', methods=['POST'])
+@login_required
+def invoice_entry2():
+    try:
+        form_fields = request.form.to_dict()
+        #form_fields = {}
+        #for key in request.form.keys():
+            #form_fields[key] = request.form.get(key)
+        print(form_fields)
+        #file=request.files=['proofOfPayment']
+        service_tags = request.form.get('serviceTags')
+        if service_tags:
+            service_tags = json.loads(service_tags)
+        return redirect(url_for('route_generatePDF.invoice_page'))
+
+    except Exception as e:
+        print('Error:',str(e) )
+        return redirect(url_for('route_generatePDF.invoice_page'))
+    
 @routeGeneratePDF_bp.route('/quotation-entry')
 @login_required
 def quote_entry():

@@ -7,7 +7,7 @@ from flask_bcrypt import Bcrypt
 from user import User
 from database_initializer import initialize_database
 from data_fetch import DataFetcher
-from query import qty_query, id_query, names, inventory, delete_details, delete_invoice, entities, newEntity, update, itemCatalog, newItem
+from query import qty_query, id_query, names, inventory, delete_details, delete_invoice, entities, newEntity, update, itemCatalog, newItem, newIT, newUser, deleteIT
 import bcrypt as hash
 from routes.route_generatePDF import routeGeneratePDF_bp as generatePDF
 import logging
@@ -248,6 +248,32 @@ def create_app():
         # You can fetch other user data as needed
         entitydata=data_fetcher.fetch_data(itemCatalog)
         return render_template("catalog.html", customers=entitydata)
+    
+    @app.route('/new-user')
+    @login_required
+    def new_user_page():
+        return render_template("new_user.html")
+    
+    @app.route('/new-user/add-new-user', methods=['POST'])
+    @login_required
+    def add_new_user():
+        fName=request.form.get('firstName_field').lower()
+        lName=request.form.get('lastName_field').lower()
+        nPassword=request.form.get('createPassword_field')
+        uname=fName.replace(" ", "")+lName.replace(" ", "")
+        data=(uname, lName.title(), fName.title())
+
+        with DataFetcher(app.config['database']) as data_fetcher:
+            if data_fetcher.insert_data(newIT, data)==True:
+                salt = hash.gensalt()
+                hex_salt=salt.hex()
+                hashed_password = hash.hashpw(nPassword.encode('utf-8'), salt)
+                hex_hashed_password=hashed_password.hex()
+                data=(uname, hex_hashed_password, hex_salt)
+                if data_fetcher.insert_data(newUser, data) != True:
+                    data_fetcher.delete_data(deleteIT, [uname])
+
+        return redirect(url_for('new_user_page'))
 
     @app.route('/add-item', methods=['GET', 'POST'])
     @login_required

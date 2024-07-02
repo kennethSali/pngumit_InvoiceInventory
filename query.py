@@ -32,6 +32,7 @@ allInv="SELECT * FROM invoices"
 #Query for invoice details
 inv_basic="SELECT * FROM invoices WHERE inv_no=%s"
 inv_details="SELECT * FROM invoice_items WHERE inv_no=%s"
+itemsNotInvoiced="SELECT i.itm_servtag, i.itm_id FROM inventory i LEFT JOIN invoiced_items ii ON i.itm_servtag=ii.item_service_tag WHERE ii.item_service_tag IS NULL AND i.itm_id=%s;"
 
 #Query to get sold number of item
 sold_query="SELECT itm_name, (tot_qty-curr_qty) AS itm_sold, tot_qty FROM items WHERE itm_name='{solditem}';"
@@ -60,3 +61,6 @@ update = "UPDATE `inventory` SET `flag` = %s WHERE (`itm_servtag` = %s);"
 
 newItem = "INSERT INTO `items` (`itm_name`, `date_stocked`, `itm_brand`, `itm_model`, `itm_price`, `item_desc`, `curr_qty`, `tot_qty`) VALUES (%s, %s, %s, %s, %s, %s, %s, %s);"
 
+newIT="INSERT INTO `it_contact` (`uname`, `lname`, `fname`) VALUES (%s, %s, %s);"
+newUser="INSERT INTO `users` (`username`, `password`, `salt`) VALUES (%s, %s, %s);"
+deleteIT="DELETE FROM `it_contact` WHERE `uname`=%s;"

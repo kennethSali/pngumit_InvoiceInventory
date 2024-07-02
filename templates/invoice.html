@@ -37,55 +37,201 @@
   </table>
 </div>
 <div id="new_invoice" class="tabcontent">
-<form method="POST" action="{{url_for('route_generatePDF.preview_invoice')}}" class="invoice_form" id="form1">
-    <div>
-      <label for="inv_no">Invoice Number:</label>
-      <input type="text" name="inv_no" value="{{inv}}" readonly> 
+<form method="POST" action="{{url_for('route_generatePDF.invoice_entry2')}}" class="invoice_form" id="invoiceForm">
+    <div class="container">
+        <div class="column">
+          <div>
+            <label for="inv_no">Invoice Number:</label>
+            <input type="text" name="inv_no" value="{{inv}}" readonly> 
+          </div>
+      
+          <div>
+            <label for="quotationNo_field"> Quotation to Invoice: </label>
+            <select name="quotationNo_field" id="quotationNo_dropdown">
+              <option value="" disabled selected>Choose</option>
+              {% for quotation in allQuotations %}
+               <option value="{{quotation[0]}}">Quotation No: {{quotation[0]}}</option> 
+              {% endfor %}
+            </select>
+          </div>
+      
+          <div>
+            <label for="invoiceAmount">Invoice Amount: </label>
+            <input type="number" name="invoiceAmount">
+          </div>
+      
+          <div>
+            <label for="paymentType">Payment Type: </label>
+            <select name="paymentType" id="">
+              <opiton value="" disabled selected>Choose</opiton>
+              <option value="CREDIT ACCOUNT">Credit Account</option>
+              <option value="BANK DEPOSIT"> Bank Deposit</option>
+              <option value="CASH">Cash</option>
+            </select>
+          </div>
+      
+          <div>
+            <label for="proofOfPayment">Upload Proof Of Payment: </label>
+            <input type="file" name="proofOfPayment">
+          </div>
+      
+          <div>
+            <h4>Add Items To Invoice</h4>
+            <select name="itemsToInvoice" id="itemsToInvoice">
+              <option value="" disabled selected> Choose</option>
+            </select>
+          </div>
+        </div>
+        <div class="column">
+          <div>
+            <h3>Items For Invoice</h3>
+            <ul id="selected-items-list">
+      
+            </ul>
+          </div>
+        </div>
+        <div class="column">
+          <h3 id="quoteToInvoice"></h3>
+          <p id="amountAndMissionContact"></p>
+          <table id="data-table">
+            <!-- Table headers -->
+            <thead>
+              <tr>
+                <th>Item ID</th>
+                <th>Quantity</th>
+                <th>Unit Price</th>
+                <th>Total</th>
+                <th>Item</th>
+                <th>Brand</th>
+                <th>Model</th>
+                <!-- Add more headers as needed -->
+              </tr>
+            </thead>
+            <!-- Table body -->
+            <tbody>
+              <!-- Data will be dynamically inserted here -->
+            </tbody>
+          </table>
+          <h5 id="quotationComment"></h5>
+        </div>
     </div>
-    <div>
-      <input type="text" name="it_contact" value="{{Uname.id}}" hidden>
-      <label for="contact_person">Contact Person:</label>
-      <input type="text" name="contact_person" required>
-    </div>
-    <label for="mission_entity">Mission Entity:</label>
-    
-    
-    <select name="mission_entity" required id="dropdown">
-      <option value="" disabled selected>Choose</option>
-      {% for item in data1 %}
-      <option value="{{ item.id }}">{{item.name}}</option>
-      {% endfor%}
-    </select>
-    <input id="address" name="address" value="" hidden>
-    <div>
-      <label for="mission_dept">Mission Department:</label>
-      <input type="text" name="mission_dept">
-    </div>
-
-{% for item in data %}
-  <div id="{{ item[1] }}{{ item[4] }}_div" class="form-row">
-    <div class="checkbox-label">
-      <input type="checkbox" name="{{ item[1] }}{{ item[4] }}" id="{{ item[1] }}{{ item[4] }}_checkbox" value="{{ item[1] }}{{ item[2] }}" class="item-checkbox">
-      <label for="{{ item[1] }}_checkbox">{{ item[0] }} {{ item[1] }} {{ item[2] }}</label>
-    </div>
-
-    <input type="text" name="{{ item[1] }}{{ item[4] }}_input" value="{{ item[0] }} {{ item[1] }} {{ item[2] }}" hidden>
-
-    <div class="input-label">
-      <b><label for="price">Price Per Unit (K):</label></b>
-      <input type="number" value="{{ item[3] }}" id="{{ item[1] }}{{ item[4] }}_price" name="{{ item[1] }}{{ item[4] }}_price" class="item-input" readonly disabled>
-    </div>
-
-    <div class="input-label">
-      <b><label for="quantity">Quantity:</label></b>
-      <input type="number" id="{{ item[1] }}{{ item[4] }}_quantity" name="{{ item[1] }}{{ item[4] }}_quantity" class="item-input" required disabled>
-    </div>
-
-  </div>
-
-{% endfor %}
     <button type="submit">Invoice</button>
 </form>
+
 </div>
+
+
+<script>
+  var selectedItems=[]
+
+  function updateSelectedItemsUI(){
+    $('#selected-items-list').empty();
+    selectedItems.forEach(function(item){
+      $('#selected-items-list').append('<li>'+item+'</li>');
+    });
+  
+  }
+
+  function displaySelectionQuotationUI(){
+
+  } 
+
+
+  $('#quotationNo_dropdown').change(function(){
+    selectedItems=[];
+    var quoteNo=$(this).val();
+    
+    $.ajax({
+      url:'/retrieve-quoted-items',
+      method: 'POST',
+      data:{quoteNo: quoteNo},
+      success: function(response){
+        const dropdown=$('#itemsToInvoice');
+        dropdown.empty();
+        dropdown.append($('<option>',{
+          text: 'Choose',
+          selected: true,
+          disabled: true
+        }));
+          
+        const quoteArray=response.theQuotation;
+        var quotationNumber=quoteArray[0];
+        var missionContact=quoteArray[4];
+        var totalQuoteAmount=quoteArray[6];
+        var quoteComment=quoteArray[7];
+      
+        $('#quoteToInvoice').text('Quotation: '+quotationNumber);
+        $('#quotationComment').text('Comment:' +quoteComment);
+        $('#amountAndMissionContact').text('Mission Contact: '+missionContact+'   '+' Total Quoted Amount: K. '+totalQuoteAmount);
+        var tbody = $('#data-table tbody');
+        tbody.empty(); // Clear any previous content
+
+        // Populate the modal's table body with the received data
+        response.qItems.forEach(function(row) {
+          var tr = $('<tr>');
+          console.log('QITEMS: ',row)
+          row.forEach(function(cell, index) {
+            var td = $('<td>').text(cell);
+            if (index == 0){}
+            else if (index == 1){}
+            else{
+              tr.append(td);
+            }
+
+          });
+            tbody.append(tr);
+        });
+
+        for (let i = 0; i < response.qItems.length; i++) {
+        const currentArray = response.qItems[i];
+        const optionValue=currentArray[2];
+        const textDisplay=currentArray[7]+' '+currentArray[6]+' - '+currentArray[8];
+
+        const optgroup = $('<optgroup>',{
+          label:textDisplay
+        });
+        console.log(response.itemsForInvoice);
+        for (let i=0; i<response.itemsForInvoice.length; i++){
+          const innerArray=response.itemsForInvoice[i];
+
+          for (let j=0; j<innerArray.length; j++){
+            const tupleItem=innerArray[j];
+            const serviceTag = tupleItem[0];
+            const itemCode = tupleItem[1];
+            if (optionValue==itemCode){
+              optgroup.append($('<option>', {
+                value: serviceTag,
+                text: serviceTag
+              }));
+            }
+          }
+        }
+          dropdown.append(optgroup);
+        }
+      },
+      error: function(error){
+        console.log(error);
+      }
+    });
+  });
+
+  $('#itemsToInvoice').change(function(){
+    var selectedItem=$(this).val();
+          console.log(selectedItem);
+          selectedItems.push(selectedItem);
+          console.log(selectedItems);
+          updateSelectedItemsUI();
+  });
+ 
+  //document.getElementById('invoiceForm').addEventListener('submit', function(event){
+    //event.preventDefault();
+    //let formData= new FormData(document.getElementById('invoiceForm'));
+      //  formData.forEach(function(value, key) {
+        //  console.log(key, value);
+        //});
+    //formData.append('serviceTags', JSON.stringify(selectedItems));
+
+  //});
+</script>
 {% endblock %}
 
